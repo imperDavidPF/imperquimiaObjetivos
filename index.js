@@ -31,6 +31,9 @@ const searchButton = document.getElementById('searchButton');
 const clearSearch = document.getElementById('clearSearch');
 const searchResults = document.getElementById('searchResults');
 
+// NUEVO ELEMENTO PARA PDF
+const downloadPDF = document.getElementById('downloadPDF');
+
 // Event listeners
 departmentSelect.addEventListener('change', filterByDepartment);
 
@@ -43,6 +46,9 @@ ownerSearch.addEventListener('keypress', function(e) {
         performSearch();
     }
 });
+
+// NUEVO EVENT LISTENER PARA PDF
+downloadPDF.addEventListener('click', generatePDFReport);
 
 // NUEVA FUNCIÓN: Manejar búsqueda en tiempo real (CORREGIDA)
 function handleSearchInput() {
@@ -154,6 +160,212 @@ function selectOwnerFromSearch(owner, department) {
 function clearSearchResults() {
     ownerSearch.value = '';
     searchResults.innerHTML = '';
+}
+
+// NUEVA FUNCIÓN PARA GENERAR REPORTE PDF COMPLETO
+async function generatePDFReport() {
+    try {
+        // Mostrar estado de carga
+        showStatus('Generando reporte PDF...', 'loading');
+        
+        // Crear instancia de jsPDF
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        
+        let yPosition = 20;
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const margin = 20;
+        const contentWidth = pageWidth - (margin * 2);
+        
+        // Encabezado del PDF
+        pdf.setFontSize(20);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setTextColor(44, 62, 80);
+        pdf.text('Reporte de Seguimiento de Objetivos', margin, yPosition);
+        
+        yPosition += 10;
+        pdf.setFontSize(12);
+        pdf.setFont('helvetica', 'normal');
+        pdf.setTextColor(127, 140, 141);
+        pdf.text(`Generado el: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`, margin, yPosition);
+        
+        yPosition += 15;
+        
+        // 1. Capturar y agregar gráfico global
+        if (globalChart) {
+            const globalChartCanvas = document.getElementById('globalChart');
+            const globalChartImage = await html2canvas(globalChartCanvas, {
+                scale: 2,
+                useCORS: true,
+                logging: false,
+                backgroundColor: '#ffffff'
+            });
+            
+            const imgData = globalChartImage.toDataURL('image/png');
+            const imgWidth = contentWidth;
+            const imgHeight = (globalChartImage.height * imgWidth) / globalChartImage.width;
+            
+            // Verificar si necesita nueva página
+            if (yPosition + imgHeight > pdf.internal.pageSize.getHeight() - margin) {
+                pdf.addPage();
+                yPosition = margin;
+            }
+            
+            pdf.setFontSize(16);
+            pdf.setFont('helvetica', 'bold');
+            pdf.setTextColor(44, 62, 80);
+            pdf.text('Gráfico Global de Avance', margin, yPosition);
+            yPosition += 10;
+            
+            pdf.addImage(imgData, 'PNG', margin, yPosition, imgWidth, imgHeight);
+            yPosition += imgHeight + 15;
+        }
+        
+        // 2. Capturar y agregar panel de cumplimiento
+        const compliancePanel = document.querySelector('.compliance-panel');
+        if (compliancePanel) {
+            const complianceImage = await html2canvas(compliancePanel, {
+                scale: 2,
+                useCORS: true,
+                logging: false,
+                backgroundColor: '#ffffff'
+            });
+            
+            const imgData = complianceImage.toDataURL('image/png');
+            const imgWidth = contentWidth * 0.4;
+            const imgHeight = (complianceImage.height * imgWidth) / complianceImage.width;
+            
+            // Verificar si necesita nueva página
+            if (yPosition + imgHeight > pdf.internal.pageSize.getHeight() - margin) {
+                pdf.addPage();
+                yPosition = margin;
+            }
+            
+            pdf.addImage(imgData, 'PNG', margin, yPosition, imgWidth, imgHeight);
+            yPosition += imgHeight + 15;
+        }
+        
+        // 3. Capturar y agregar gráfico de detalles (si está visible)
+        if (detailsChart && detailsChartContainer.style.display !== 'none') {
+            const detailsChartCanvas = document.getElementById('detailsChart');
+            const detailsChartImage = await html2canvas(detailsChartCanvas, {
+                scale: 2,
+                useCORS: true,
+                logging: false,
+                backgroundColor: '#ffffff'
+            });
+            
+            const imgData = detailsChartImage.toDataURL('image/png');
+            const imgWidth = contentWidth;
+            const imgHeight = (detailsChartImage.height * imgWidth) / detailsChartImage.width;
+            
+            // Verificar si necesita nueva página
+            if (yPosition + imgHeight > pdf.internal.pageSize.getHeight() - margin) {
+                pdf.addPage();
+                yPosition = margin;
+            }
+            
+            pdf.setFontSize(16);
+            pdf.setFont('helvetica', 'bold');
+            pdf.setTextColor(44, 62, 80);
+            pdf.text('Gráfico de Detalles', margin, yPosition);
+            yPosition += 10;
+            
+            pdf.addImage(imgData, 'PNG', margin, yPosition, imgWidth, imgHeight);
+            yPosition += imgHeight + 15;
+        }
+        
+        // 4. Capturar y agregar tabla de objetivos (si está visible)
+        if (objectivesTableContainer.style.display !== 'none') {
+            // Agregar nueva página para la tabla
+            pdf.addPage();
+            yPosition = margin;
+            
+            pdf.setFontSize(16);
+            pdf.setFont('helvetica', 'bold');
+            pdf.setTextColor(44, 62, 80);
+            pdf.text('Tabla de Objetivos', margin, yPosition);
+            yPosition += 15;
+            
+            // Capturar la tabla
+            const tableImage = await html2canvas(objectivesTableContainer, {
+                scale: 2,
+                useCORS: true,
+                logging: false,
+                backgroundColor: '#ffffff'
+            });
+            
+            const imgData = tableImage.toDataURL('image/png');
+            const imgWidth = contentWidth;
+            const imgHeight = (tableImage.height * imgWidth) / tableImage.width;
+            
+            pdf.addImage(imgData, 'PNG', margin, yPosition, imgWidth, imgHeight);
+        }
+        
+        // 5. Agregar información resumen
+        pdf.addPage();
+        yPosition = margin;
+        
+        pdf.setFontSize(18);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setTextColor(44, 62, 80);
+        pdf.text('Resumen Ejecutivo', margin, yPosition);
+        yPosition += 20;
+        
+        // Estadísticas generales
+        pdf.setFontSize(12);
+        pdf.setFont('helvetica', 'normal');
+        pdf.setTextColor(0, 0, 0);
+        
+        const totalObjectives = objectivesData.length;
+        const totalDepartments = [...new Set(objectivesData.map(item => item.department))].length;
+        const totalOwners = [...new Set(objectivesData.map(item => item.owner))].length;
+        const avgProgress = objectivesData.reduce((sum, obj) => sum + obj.progress, 0) / totalObjectives;
+        
+        pdf.text(`• Total de Objetivos: ${totalObjectives}`, margin, yPosition);
+        yPosition += 8;
+        pdf.text(`• Total de Departamentos: ${totalDepartments}`, margin, yPosition);
+        yPosition += 8;
+        pdf.text(`• Total de Propietarios: ${totalOwners}`, margin, yPosition);
+        yPosition += 8;
+        pdf.text(`• Avance Promedio General: ${avgProgress.toFixed(2)}%`, margin, yPosition);
+        yPosition += 15;
+        
+        // Información del contexto actual
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Contexto Actual:', margin, yPosition);
+        yPosition += 8;
+        
+        pdf.setFont('helvetica', 'normal');
+        if (currentDepartment) {
+            pdf.text(`• Departamento seleccionado: ${currentDepartment}`, margin, yPosition);
+            yPosition += 8;
+        }
+        if (selectedOwner) {
+            pdf.text(`• Propietario seleccionado: ${selectedOwner.owner}`, margin, yPosition);
+            yPosition += 8;
+        }
+        if (selectedDepartment) {
+            pdf.text(`• Departamento en detalle: ${selectedDepartment}`, margin, yPosition);
+            yPosition += 8;
+        }
+        
+        // Pie de página
+        const footerY = pdf.internal.pageSize.getHeight() - 15;
+        pdf.setFontSize(10);
+        pdf.setTextColor(127, 140, 141);
+        pdf.text('Reporte generado automáticamente - Sistema de Seguimiento de Objetivos', margin, footerY);
+        
+        // Descargar el PDF
+        const fileName = `Reporte_Objetivos_${new Date().toISOString().split('T')[0]}.pdf`;
+        pdf.save(fileName);
+        
+        showStatus('Reporte PDF generado y descargado correctamente', 'success');
+        
+    } catch (error) {
+        console.error('Error al generar PDF:', error);
+        showStatus('Error al generar el reporte PDF: ' + error.message, 'error');
+    }
 }
 
 // Función para cargar automáticamente desde ruta específica

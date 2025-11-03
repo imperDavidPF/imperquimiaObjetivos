@@ -6,6 +6,9 @@
     <title>Tablero de Seguimiento de Objetivos</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- AGREGAR ESTAS LIBRERÍAS PARA PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <link rel="stylesheet" href="index.css">
 </head>
 <body>
@@ -27,6 +30,20 @@
                     <button id="clearSearch">Limpiar</button>
                 </div>
                 <div id="searchResults" class="search-results"></div>
+            </div>
+        </div>
+        
+        <!-- BOTÓN DE DESCARGAR PDF -->
+        <div class="export-section">
+            <div class="card">
+                <div class="export-container">
+                    <button id="downloadPDF" class="export-button">
+                        📊 Descargar Reporte Completo PDF
+                    </button>
+                    <div class="export-info">
+                        <small>Incluye todos los gráficos y tablas actuales</small>
+                    </div>
+                </div>
             </div>
         </div>
         
